@@ -926,14 +926,13 @@ function generateMixed() {
 function buildMap() {
   const grid=document.getElementById('mapGrid');
   grid.innerHTML='';
-  LEVELS.forEach((lvl,i)=>{
+  LEVELS.forEach(lvl=>{
     const completed=STATE.completedLevels.includes(lvl.id);
-    const unlocked=i===0||STATE.completedLevels.includes(i-1);
     const node=document.createElement('div');
-    node.className=`level-node ${completed?'completed':unlocked?'unlocked':'locked'}`;
-    const stars=completed?'⭐⭐⭐':unlocked?'☆☆☆':'🔒';
+    node.className=`level-node ${completed?'completed':'unlocked'}`;
+    const stars=completed?'⭐⭐⭐':'☆☆☆';
     node.innerHTML=`<div class="level-type-badge">${lvl.badge}</div><span class="level-icon">${lvl.icon}</span><div class="level-name">${lvl.name}</div><div class="level-stars">${stars}</div><div style="font-size:5px;color:#aaa;margin-top:5px;">${lvl.type}</div>`;
-    if(unlocked) node.onclick=()=>startLevel(lvl.id);
+    node.onclick=()=>startLevel(lvl.id);
     grid.appendChild(node);
   });
 }
