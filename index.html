@@ -416,6 +416,7 @@
     <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
       <button class="pixel-btn btn-pink" onclick="showScreen('screen-map')">🗺️ PLAY!</button>
       <button class="pixel-btn btn-gold" onclick="showScreen('screen-shop')">🎁 PRIZES</button>
+      <button class="pixel-btn btn-blue" id="mysteryBoxBtn" onclick="claimMysteryBox()">🎁 MYSTERY BOX</button>
     </div>
     <div style="font-size:7px; color:var(--gold);">TOTAL STARS: <span id="titleStarsTotal">0</span> ⭐</div>
   </div>
@@ -530,6 +531,39 @@ function checkDailyStreak() {
   return {days: STATE.streakDays, bonus};
 }
 
+function mysteryBoxAvailable() {
+  return STATE.mysteryBoxLastClaimed !== todayKey();
+}
+
+function refreshMysteryBox() {
+  const btn = document.getElementById('mysteryBoxBtn');
+  if (!btn) return;
+  if (mysteryBoxAvailable()) {
+    btn.textContent = '🎁 MYSTERY BOX';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  } else {
+    btn.textContent = '🎁 BACK TOMORROW';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  }
+}
+
+function claimMysteryBox() {
+  if (!mysteryBoxAvailable()) { playWrongSound(); return; }
+  const reward = randInt(1, 10);
+  STATE.stars += reward;
+  STATE.mysteryBoxLastClaimed = todayKey();
+  saveState(); updateHUD(); refreshMysteryBox();
+  playCoinSound(); launchConfetti();
+  document.getElementById('feedbackOverlay').className='feedback-overlay show feedback-correct';
+  document.getElementById('feedbackText').innerHTML=
+    `<div style="font-size:60px;">🎁</div>`+
+    `<div>MYSTERY BOX!</div>`+
+    `<div style="font-size:clamp(12px,3vw,20px);color:var(--gold);margin-top:10px;">+${reward} ⭐</div>`;
+  setTimeout(()=>{ hideFeedback(); document.getElementById('confettiContainer').innerHTML=''; }, 2500);
+}
+
 let audioCtx = null;
 function getAudioCtx() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
 
@@ -612,6 +646,7 @@ function updateHUD() {
   const tn=document.getElementById('titleName'); if(tn) tn.textContent=STATE.playerName;
   const ts=document.getElementById('titleStreak'); if(ts) ts.textContent=STATE.streakDays||0;
   renderCastle();
+  refreshMysteryBox();
 }
 
 const CASTLE_TIERS = [
