@@ -396,6 +396,7 @@
   <div class="hud">
     <div class="hud-item">⭐ STARS: <span id="titleStars">0</span></div>
     <div class="hud-item" style="color:var(--pink);">HERO: <span id="titleName"></span></div>
+    <div class="hud-item" style="color:var(--gold);">🔥 STREAK: <span id="titleStreak">0</span></div>
   </div>
   <div style="display:flex; flex-direction:column; align-items:center; gap:20px; flex:1; justify-content:center; width:100%; max-width:600px;">
     <div class="title-castle">🏰</div>
@@ -483,6 +484,10 @@
 const STATE = {
   playerName: '', stars: 0,
   completedLevels: [], ownedPrizes: [], musicOn: true,
+  streakDays: 0, lastPlayedDate: null,
+  mysteryBoxLastClaimed: null,
+  ownedCompanions: [],
+  readAloud: false,
 };
 const SESSION = {
   currentLevel: null, currentQ: 0, currentScore: 0, questions: null,
@@ -491,10 +496,29 @@ const SESSION = {
 };
 
 function saveState() {
-  const {playerName, stars, completedLevels, ownedPrizes, musicOn} = STATE;
-  localStorage.setItem('peachGame', JSON.stringify({playerName, stars, completedLevels, ownedPrizes, musicOn}));
+  const {playerName, stars, completedLevels, ownedPrizes, musicOn,
+         streakDays, lastPlayedDate, mysteryBoxLastClaimed, ownedCompanions, readAloud} = STATE;
+  localStorage.setItem('peachGame', JSON.stringify({
+    playerName, stars, completedLevels, ownedPrizes, musicOn,
+    streakDays, lastPlayedDate, mysteryBoxLastClaimed, ownedCompanions, readAloud,
+  }));
 }
 function loadState() { const s = localStorage.getItem('peachGame'); if(s) Object.assign(STATE, JSON.parse(s)); }
+
+function todayKey() { return new Date().toDateString(); }
+function yesterdayKey() { const d = new Date(); d.setDate(d.getDate()-1); return d.toDateString(); }
+
+function checkDailyStreak() {
+  const today = todayKey();
+  if (STATE.lastPlayedDate === today) return null;
+  if (STATE.lastPlayedDate === yesterdayKey()) STATE.streakDays = (STATE.streakDays||0) + 1;
+  else STATE.streakDays = 1;
+  STATE.lastPlayedDate = today;
+  const bonus = Math.min(STATE.streakDays, 7);
+  STATE.stars += bonus;
+  saveState();
+  return {days: STATE.streakDays, bonus};
+}
 
 let audioCtx = null;
 function getAudioCtx() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
@@ -558,6 +582,20 @@ function updateHUD() {
   const s = STATE.stars;
   ['titleStars','mapStars','gameStars','shopStars','titleStarsTotal'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=s; });
   const tn=document.getElementById('titleName'); if(tn) tn.textContent=STATE.playerName;
+  const ts=document.getElementById('titleStreak'); if(ts) ts.textContent=STATE.streakDays||0;
+}
+
+function showStreakBonus(streak) {
+  if (!streak) return;
+  const overlay=document.getElementById('feedbackOverlay');
+  document.getElementById('feedbackText').innerHTML=
+    `<div style="font-size:60px;">🔥</div>`+
+    `<div>DAILY STREAK!</div>`+
+    `<div style="font-size:clamp(10px,2.5vw,16px);color:var(--gold);margin-top:10px;">DAY ${streak.days} 🔥</div>`+
+    `<div style="font-size:clamp(8px,2vw,12px);color:var(--white);margin-top:8px;">+${streak.bonus} ⭐ BONUS!</div>`;
+  overlay.className='feedback-overlay show feedback-correct';
+  playLevelUpSound();
+  setTimeout(hideFeedback, 2500);
 }
 
 const LEVELS = [
@@ -969,19 +1007,24 @@ function buyPrize(id,cost){
 function startGame(){
   const name=document.getElementById('playerNameInput').value.trim();
   if(!name){playWrongSound();return;}
-  STATE.playerName=name.toUpperCase();saveState();updateHUD();buildMap();buildShop();
+  STATE.playerName=name.toUpperCase();saveState();
+  const streak=checkDailyStreak();
+  updateHUD();buildMap();buildShop();
   showScreen('screen-title');startBgMusic();
   const msg=document.getElementById('peachMessage');
   if(msg) msg.textContent=`"WELCOME, ${STATE.playerName}! LET'S GO ON AN ADVENTURE!"`;
+  if(streak) setTimeout(()=>showStreakBonus(streak), 600);
 }
 
 window.onload=()=>{
   loadState();createStars();
   document.getElementById('musicBtn').textContent=STATE.musicOn?'🎵':'🔇';
   if(STATE.playerName){
+    const streak=checkDailyStreak();
     buildMap();buildShop();updateHUD();showScreen('screen-title');startBgMusic();
     const msg=document.getElementById('peachMessage');
     if(msg) msg.textContent=`"WELCOME BACK, ${STATE.playerName}! READY TO PLAY?"`;
+    if(streak) setTimeout(()=>showStreakBonus(streak), 600);
   }
   document.getElementById('playerNameInput').addEventListener('keydown',e=>{if(e.key==='Enter') startGame();});
 };
