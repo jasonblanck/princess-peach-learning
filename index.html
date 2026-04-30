@@ -487,7 +487,10 @@ const STATE = {
   currentLevel: null, currentQ: 0, currentScore: 0, musicOn: true,
 };
 
-function saveState() { localStorage.setItem('peachGame', JSON.stringify(STATE)); }
+function saveState() {
+  const {playerName, stars, lives, completedLevels, ownedPrizes, musicOn} = STATE;
+  localStorage.setItem('peachGame', JSON.stringify({playerName, stars, lives, completedLevels, ownedPrizes, musicOn}));
+}
 function loadState() { const s = localStorage.getItem('peachGame'); if(s) Object.assign(STATE, JSON.parse(s)); }
 
 let audioCtx = null;
@@ -542,6 +545,7 @@ function createStars() {
 
 function showScreen(id) {
   playClickSound();
+  if(id!=='screen-game') clearTimeout(attentionTimeout);
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   updateHUD();
@@ -575,7 +579,7 @@ function shuffle(arr) { return [...arr].sort(()=>Math.random()-0.5); }
 function randInt(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
 
 function generateLetterMatch() {
-  const letters='ABCDEFGHIJKLMNOPRSTW'.split('');
+  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const qs=[];
   for(let i=0;i<6;i++){
     const correct=rand(letters);
@@ -613,7 +617,7 @@ function generatePhonics() {
     {word:'bat',chunks:['b','a','t']},{word:'jet',chunks:['j','e','t']},
   ];
   return shuffle(phonicsWords).slice(0,6).map(({word,chunks})=>{
-    const others=SIGHT_WORDS.filter(w=>w!==word).slice(0,3);
+    const others=shuffle(SIGHT_WORDS.filter(w=>w!==word)).slice(0,3);
     return {type:'phonics',prompt:'Tap each sound, then pick the word!',display:word,chunks,options:shuffle([word,...others]),answer:word,emoji:'👸'};
   });
 }
@@ -652,8 +656,9 @@ function generateNumberLine() {
 }
 
 function generateSpelling() {
-  const words=shuffle([...SIGHT_WORDS,...SIGHT_WORDS2]).slice(0,6);
-  return words.map(word=>({type:'spelling',prompt:'Spell the word for this picture!',display:EMOJIS_MAP[word]||'⭐',displayType:'emojiSpell',hint:word,answer:word.toUpperCase(),emoji:'🧩'}));
+  const pool=[...SIGHT_WORDS,...SIGHT_WORDS2].filter(w=>EMOJIS_MAP[w]);
+  const words=shuffle(pool).slice(0,6);
+  return words.map(word=>({type:'spelling',prompt:'Spell the word for this picture!',display:EMOJIS_MAP[word],displayType:'emojiSpell',hint:word,answer:word.toUpperCase(),emoji:'🧩'}));
 }
 
 function generateMixed() {
@@ -969,6 +974,7 @@ function startGame(){
 
 window.onload=()=>{
   loadState();createStars();
+  document.getElementById('musicBtn').textContent=STATE.musicOn?'🎵':'🔇';
   if(STATE.playerName){
     buildMap();buildShop();updateHUD();showScreen('screen-title');startBgMusic();
     const msg=document.getElementById('peachMessage');
