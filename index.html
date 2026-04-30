@@ -101,6 +101,19 @@
   .castle-main { font-size: clamp(60px, 15vw, 120px); line-height: 1; }
   .castle-decor { display: flex; gap: 6px; font-size: clamp(14px, 3vw, 22px); flex-wrap: wrap; justify-content: center; max-width: 320px; }
   .castle-tier-label { font-size: 7px; color: var(--gold); text-shadow: 1px 1px 0 #000; letter-spacing: 1px; }
+
+  .companions-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 480px; }
+  .companion-slot {
+    background: rgba(0,0,0,0.6); border: 2px solid #444;
+    width: 56px; padding: 6px 4px; text-align: center;
+    transition: transform 0.2s, border-color 0.3s;
+  }
+  .companion-slot.unlocked { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,215,0,0.4); }
+  .companion-slot.unlocked:hover { transform: scale(1.1); }
+  .companion-icon { font-size: 24px; display: block; }
+  .companion-icon.locked { filter: grayscale(1) brightness(0.4); }
+  .companion-name { font-size: 5px; color: var(--white); margin-top: 3px; line-height: 1.6; }
+  .companion-cost { font-size: 5px; color: var(--gold); margin-top: 2px; }
   @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
 
   .game-title {
@@ -418,6 +431,8 @@
       <button class="pixel-btn btn-gold" onclick="showScreen('screen-shop')">🎁 PRIZES</button>
       <button class="pixel-btn btn-blue" id="mysteryBoxBtn" onclick="claimMysteryBox()">🎁 MYSTERY BOX</button>
     </div>
+    <div style="font-size:7px;color:var(--gold);margin-top:8px;">👯 YOUR FRIENDS</div>
+    <div class="companions-row" id="companionsRow"></div>
     <div style="font-size:7px; color:var(--gold);">TOTAL STARS: <span id="titleStarsTotal">0</span> ⭐</div>
   </div>
 </div>
@@ -527,6 +542,7 @@ function checkDailyStreak() {
   STATE.lastPlayedDate = today;
   const bonus = Math.min(STATE.streakDays, 7);
   STATE.stars += bonus;
+  checkCompanionUnlocks();
   saveState();
   return {days: STATE.streakDays, bonus};
 }
@@ -554,6 +570,7 @@ function claimMysteryBox() {
   const reward = randInt(1, 10);
   STATE.stars += reward;
   STATE.mysteryBoxLastClaimed = todayKey();
+  checkCompanionUnlocks();
   saveState(); updateHUD(); refreshMysteryBox();
   playCoinSound(); launchConfetti();
   document.getElementById('feedbackOverlay').className='feedback-overlay show feedback-correct';
@@ -647,6 +664,15 @@ function updateHUD() {
   const ts=document.getElementById('titleStreak'); if(ts) ts.textContent=STATE.streakDays||0;
   renderCastle();
   refreshMysteryBox();
+  renderCompanions();
+}
+
+function awardStars(n) {
+  STATE.stars += n;
+  saveState();
+  const unlocked = checkCompanionUnlocks();
+  if (unlocked.length) setTimeout(()=>showCompanionUnlock(unlocked[0]), 1800);
+  return unlocked;
 }
 
 const CASTLE_TIERS = [
@@ -667,6 +693,51 @@ function renderCastle() {
   el.innerHTML = `<div class="castle-main">🏰</div>` +
     (tier.decor ? `<div class="castle-decor">${tier.decor}</div>` : '') +
     `<div class="castle-tier-label">${tier.label}</div>`;
+}
+
+const COMPANIONS = [
+  {id:'toad',     icon:'🍄', name:'TOAD',     threshold:5},
+  {id:'yoshi',    icon:'🦖', name:'YOSHI',    threshold:15},
+  {id:'daisy',    icon:'🌼', name:'DAISY',    threshold:30},
+  {id:'rosalina', icon:'🌌', name:'ROSALINA', threshold:60},
+  {id:'kong',     icon:'🦍', name:'D.KONG',   threshold:100},
+  {id:'starfriend', icon:'🌟', name:'LUMA',   threshold:150},
+];
+
+function checkCompanionUnlocks() {
+  const newlyUnlocked = [];
+  COMPANIONS.forEach(c => {
+    if (STATE.stars >= c.threshold && !STATE.ownedCompanions.includes(c.id)) {
+      STATE.ownedCompanions.push(c.id);
+      newlyUnlocked.push(c);
+    }
+  });
+  if (newlyUnlocked.length) saveState();
+  return newlyUnlocked;
+}
+
+function renderCompanions() {
+  const row = document.getElementById('companionsRow');
+  if (!row) return;
+  row.innerHTML = COMPANIONS.map(c => {
+    const owned = STATE.ownedCompanions.includes(c.id);
+    return `<div class="companion-slot ${owned?'unlocked':''}">`+
+      `<span class="companion-icon ${owned?'':'locked'}">${owned?c.icon:'🔒'}</span>`+
+      `<div class="companion-name">${owned?c.name:'???'}</div>`+
+      `<div class="companion-cost">${owned?'✓':c.threshold+'⭐'}</div>`+
+      `</div>`;
+  }).join('');
+}
+
+function showCompanionUnlock(companion) {
+  document.getElementById('feedbackOverlay').className='feedback-overlay show feedback-correct';
+  document.getElementById('feedbackText').innerHTML=
+    `<div style="font-size:60px;">${companion.icon}</div>`+
+    `<div>NEW FRIEND!</div>`+
+    `<div style="font-size:clamp(10px,2.5vw,16px);color:var(--gold);margin-top:10px;">${companion.name} JOINED YOU!</div>`;
+  playLevelUpSound();
+  launchConfetti();
+  setTimeout(()=>{ hideFeedback(); document.getElementById('confettiContainer').innerHTML=''; }, 2800);
 }
 
 function showStreakBonus(streak) {
@@ -972,7 +1043,7 @@ function checkAnswer(selected, correct, btn) {
   allBtns.forEach(b=>b.disabled=true);
   if(isCorrect){
     btn.classList.add('correct'); playCorrectSound(); showFeedback(true);
-    SESSION.currentScore++; STATE.stars++; saveState();
+    SESSION.currentScore++; awardStars(1);
     setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
     btn.classList.add('wrong');
@@ -1005,7 +1076,7 @@ function checkSentence(){
   const built=SESSION.sentenceBuilt.map(s=>s.word).join(' ');
   const q=SESSION.questions[SESSION.currentQ];
   if(built.toLowerCase()===q.correct.toLowerCase()){
-    playCorrectSound();showFeedback(true);SESSION.currentScore++;STATE.stars++;saveState();
+    playCorrectSound();showFeedback(true);SESSION.currentScore++;awardStars(1);
     setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
     playWrongSound();showFeedback(false,q.correct);
@@ -1030,7 +1101,7 @@ function clearSpelling(){
 function checkSpelling(){
   const ans=SESSION.spellingAnswer.map(a=>a.l).join('');
   if(ans===SESSION.spellingCorrect){
-    playCorrectSound();showFeedback(true);SESSION.currentScore++;STATE.stars++;saveState();
+    playCorrectSound();showFeedback(true);SESSION.currentScore++;awardStars(1);
     setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
     playWrongSound();showFeedback(false,SESSION.spellingCorrect);
@@ -1083,7 +1154,7 @@ function triggerAttentionCheck(){
 function dismissAttention(){
   document.getElementById('attentionOverlay').classList.remove('show');
   playCorrectSound();
-  STATE.stars+=2;saveState();updateHUD();
+  awardStars(2);updateHUD();
   showFeedback(true);setTimeout(hideFeedback,1200);
   scheduleAttentionCheck();
 }
