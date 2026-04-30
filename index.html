@@ -637,7 +637,9 @@ const LEVELS = [
   {id:5, name:'SENTENCE CASTLE', icon:'🏰', type:'READING', badge:'WORDS', questions:()=>generateSentence()},
   {id:6, name:'RAINBOW ROAD', icon:'🌈', type:'MATH', badge:'MATH', questions:()=>generateNumberLine()},
   {id:7, name:'WORD PUZZLE', icon:'🧩', type:'READING', badge:'SPELL', questions:()=>generateSpelling()},
-  {id:8, name:'MAGIC KINGDOM', icon:'✨', type:'MIXED', badge:'MIX', questions:()=>generateMixed()},
+  {id:8, name:'RHYME GARDEN', icon:'🌸', type:'READING', badge:'RHYME', questions:()=>generateRhyming()},
+  {id:9, name:'SOUND HUNT', icon:'🔊', type:'READING', badge:'SOUNDS', questions:()=>generateBeginningSound()},
+  {id:10, name:'MAGIC KINGDOM', icon:'✨', type:'MIXED', badge:'MIX', questions:()=>generateMixed()},
 ];
 
 const SIGHT_WORDS = ['cat','dog','sun','run','hop','big','red','hat','map','cup','fan','bat','log','pin','jet','mom','dad','bed','sit','lap','nap','jam','dig','bug','hug','tug','mud','cut','bus','nut','cake','rose'];
@@ -728,6 +730,56 @@ function generateSpelling() {
   const pool=SIGHT_WORDS.filter(w=>EMOJIS_MAP[w]);
   const words=shuffle(pool).slice(0,6);
   return words.map(word=>({type:'spelling',prompt:'Spell the word for this picture!',display:EMOJIS_MAP[word],hint:word,answer:word.toUpperCase()}));
+}
+
+const RHYME_GROUPS = [
+  ['cat','bat','hat','rat','sat','mat'],
+  ['dog','log','fog','jog','hog'],
+  ['sun','run','fun','bun'],
+  ['hop','top','mop','pop'],
+  ['big','dig','pig','wig'],
+  ['red','bed','fed','led'],
+  ['bug','hug','jug','mug','tug'],
+  ['nut','cut','but','hut'],
+  ['cake','bake','lake','make','take','rake','wake'],
+  ['rose','nose','hose','close'],
+];
+
+function generateRhyming() {
+  const allWords = RHYME_GROUPS.flat();
+  const qs = [];
+  for (let i = 0; i < 6; i++) {
+    const group = rand(RHYME_GROUPS);
+    const [target, answer] = shuffle(group).slice(0, 2);
+    const decoys = shuffle(allWords.filter(w => !group.includes(w))).slice(0, 3);
+    qs.push({
+      type: 'choice',
+      prompt: 'Which word RHYMES?',
+      display: target,
+      displayType: 'bigWord',
+      options: shuffle([answer, ...decoys]),
+      answer,
+    });
+  }
+  return qs;
+}
+
+function generateBeginningSound() {
+  const qs = [];
+  for (let i = 0; i < 6; i++) {
+    const target = rand(SIGHT_WORDS);
+    const startLetter = target[0];
+    const decoys = shuffle(SIGHT_WORDS.filter(w => w[0] !== startLetter && w !== target)).slice(0, 3);
+    qs.push({
+      type: 'choice',
+      prompt: `Which word starts with the SOUND of ${startLetter.toUpperCase()}?`,
+      display: startLetter.toUpperCase(),
+      displayType: 'bigLetter',
+      options: shuffle([target, ...decoys]),
+      answer: target,
+    });
+  }
+  return qs;
 }
 
 function generateMixed() {
