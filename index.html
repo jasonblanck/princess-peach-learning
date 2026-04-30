@@ -396,7 +396,6 @@
   <div class="hud">
     <div class="hud-item">⭐ STARS: <span id="titleStars">0</span></div>
     <div class="hud-item" style="color:var(--pink);">HERO: <span id="titleName"></span></div>
-    <div class="hud-item" style="color:var(--red);">❤️ <span id="titleLives">3</span></div>
   </div>
   <div style="display:flex; flex-direction:column; align-items:center; gap:20px; flex:1; justify-content:center; width:100%; max-width:600px;">
     <div class="title-castle">🏰</div>
@@ -482,14 +481,18 @@
 
 <script>
 const STATE = {
-  playerName: '', stars: 0, lives: 3,
-  completedLevels: [], ownedPrizes: [],
-  currentLevel: null, currentQ: 0, currentScore: 0, musicOn: true,
+  playerName: '', stars: 0,
+  completedLevels: [], ownedPrizes: [], musicOn: true,
+};
+const SESSION = {
+  currentLevel: null, currentQ: 0, currentScore: 0, questions: null,
+  sentenceBuilt: [], sentenceWords: [], sentenceCorrect: '',
+  spellingAnswer: [], spellingCorrect: '', spellingLen: 0,
 };
 
 function saveState() {
-  const {playerName, stars, lives, completedLevels, ownedPrizes, musicOn} = STATE;
-  localStorage.setItem('peachGame', JSON.stringify({playerName, stars, lives, completedLevels, ownedPrizes, musicOn}));
+  const {playerName, stars, completedLevels, ownedPrizes, musicOn} = STATE;
+  localStorage.setItem('peachGame', JSON.stringify({playerName, stars, completedLevels, ownedPrizes, musicOn}));
 }
 function loadState() { const s = localStorage.getItem('peachGame'); if(s) Object.assign(STATE, JSON.parse(s)); }
 
@@ -555,7 +558,6 @@ function updateHUD() {
   const s = STATE.stars;
   ['titleStars','mapStars','gameStars','shopStars','titleStarsTotal'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=s; });
   const tn=document.getElementById('titleName'); if(tn) tn.textContent=STATE.playerName;
-  const tl=document.getElementById('titleLives'); if(tl) tl.textContent=STATE.lives;
 }
 
 const LEVELS = [
@@ -570,9 +572,8 @@ const LEVELS = [
   {id:8, name:'MAGIC KINGDOM', icon:'✨', type:'MIXED', badge:'MIX', questions:()=>generateMixed()},
 ];
 
-const SIGHT_WORDS = ['cat','dog','sun','run','hop','big','red','hat','map','cup','fan','bat','log','pin','jet','mom','dad','bed','sit','lap','nap','jam','dig','bug','hug','tug','mud','cut','bus','nut'];
-const SIGHT_WORDS2 = ['cake','like','bike','time','fine','pine','nose','rose','hope','cute','game','lane','rake','lake','bake','wake','make','take','name','came','late','gate'];
-const EMOJIS_MAP = {'cat':'🐱','dog':'🐶','sun':'☀️','hat':'🎩','bug':'🐛','cup':'🍵','bed':'🛏️','bus':'🚌','mom':'👩','dad':'👨','star':'⭐','cake':'🎂','rose':'🌹','castle':'🏰','crown':'👑','flower':'🌸','mushroom':'🍄','coin':'🪙'};
+const SIGHT_WORDS = ['cat','dog','sun','run','hop','big','red','hat','map','cup','fan','bat','log','pin','jet','mom','dad','bed','sit','lap','nap','jam','dig','bug','hug','tug','mud','cut','bus','nut','cake','rose'];
+const EMOJIS_MAP = {'cat':'🐱','dog':'🐶','sun':'☀️','hat':'🎩','bug':'🐛','cup':'🍵','bed':'🛏️','bus':'🚌','mom':'👩','dad':'👨','cake':'🎂','rose':'🌹'};
 
 function rand(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 function shuffle(arr) { return [...arr].sort(()=>Math.random()-0.5); }
@@ -584,7 +585,7 @@ function generateLetterMatch() {
   for(let i=0;i<6;i++){
     const correct=rand(letters);
     const opts=shuffle([correct,...shuffle(letters.filter(l=>l!==correct)).slice(0,3)]);
-    qs.push({type:'choice',prompt:'Which letter is this?',display:correct,displayType:'bigLetter',options:opts,answer:correct,emoji:'🍄'});
+    qs.push({type:'choice',prompt:'Which letter is this?',display:correct,displayType:'bigLetter',options:opts,answer:correct});
   }
   return qs;
 }
@@ -593,7 +594,7 @@ function generateSightWords() {
   const words=shuffle([...SIGHT_WORDS]).slice(0,6);
   return words.map(word=>{
     const decoys=shuffle(SIGHT_WORDS.filter(w=>w!==word)).slice(0,3);
-    return {type:'choice',prompt:'👸 Peach says... which word is this?',display:word,displayType:'bigWord',options:shuffle([word,...decoys]),answer:word,emoji:EMOJIS_MAP[word]||'⭐'};
+    return {type:'choice',prompt:'👸 Peach says... which word is this?',display:word,displayType:'bigWord',options:shuffle([word,...decoys]),answer:word};
   });
 }
 
@@ -603,7 +604,7 @@ function generateCounting() {
     const n=randInt(1,10);
     const emoji=rand(['🍄','⭐','🪙','🌸','👑','🐢']);
     const decoys=shuffle([n-1,n+1,n+2,n-2].filter(x=>x>0&&x<=12&&x!==n)).slice(0,3);
-    qs.push({type:'choice',prompt:`Count the ${emoji}'s!`,display:emoji.repeat(n),displayType:'emojiCount',options:shuffle([n,...decoys]),answer:n,emoji:'🪙'});
+    qs.push({type:'choice',prompt:`Count the ${emoji}'s!`,display:emoji.repeat(n),displayType:'emojiCount',options:shuffle([n,...decoys]),answer:n});
   }
   return qs;
 }
@@ -618,7 +619,7 @@ function generatePhonics() {
   ];
   return shuffle(phonicsWords).slice(0,6).map(({word,chunks})=>{
     const others=shuffle(SIGHT_WORDS.filter(w=>w!==word)).slice(0,3);
-    return {type:'phonics',prompt:'Tap each sound, then pick the word!',display:word,chunks,options:shuffle([word,...others]),answer:word,emoji:'👸'};
+    return {type:'phonics',prompt:'Tap each sound, then pick the word!',display:word,chunks,options:shuffle([word,...others]),answer:word};
   });
 }
 
@@ -628,7 +629,7 @@ function generateAddition() {
     const a=randInt(1,9),b=randInt(1,9),ans=a+b;
     const decoys=shuffle([ans-1,ans+1,ans+2,ans-2].filter(x=>x>0&&x!==ans)).slice(0,3);
     const e=rand(['🍄','⭐','🪙','🌸']);
-    qs.push({type:'choice',prompt:`${e.repeat(Math.min(a,5))} + ${e.repeat(Math.min(b,5))}`,display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...decoys]),answer:ans,emoji:'🐢'});
+    qs.push({type:'choice',prompt:`${e.repeat(Math.min(a,5))} + ${e.repeat(Math.min(b,5))}`,display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...decoys]),answer:ans});
   }
   return qs;
 }
@@ -642,7 +643,7 @@ function generateSentence() {
     {words:['I','see','the','sun'],correct:'I see the sun'},
     {words:['He','has','a','hat'],correct:'He has a hat'},
   ];
-  return shuffle(sentences).slice(0,5).map(s=>({type:'sentence',prompt:'Put the words in order!',display:'👸 Make a sentence!',words:shuffle(s.words),correct:s.correct,answer:s.correct,emoji:'🏰'}));
+  return shuffle(sentences).slice(0,5).map(s=>({type:'sentence',prompt:'Put the words in order!',display:'👸 Make a sentence!',words:shuffle(s.words),correct:s.correct,answer:s.correct}));
 }
 
 function generateNumberLine() {
@@ -650,15 +651,15 @@ function generateNumberLine() {
   for(let i=0;i<6;i++){
     const start=randInt(1,15),steps=randInt(1,5),ans=start+steps;
     const decoys=shuffle([ans-1,ans+1,ans+2].filter(x=>x!==ans)).slice(0,3);
-    qs.push({type:'choice',prompt:`Start at ${start}. Count ${steps} more!`,display:`${start} + ${steps} = ?`,displayType:'numberLine',nlStart:start,nlSteps:steps,options:shuffle([ans,...decoys]),answer:ans,emoji:'🌈'});
+    qs.push({type:'choice',prompt:`Start at ${start}. Count ${steps} more!`,display:`${start} + ${steps} = ?`,displayType:'numberLine',nlStart:start,nlSteps:steps,options:shuffle([ans,...decoys]),answer:ans});
   }
   return qs;
 }
 
 function generateSpelling() {
-  const pool=[...SIGHT_WORDS,...SIGHT_WORDS2].filter(w=>EMOJIS_MAP[w]);
+  const pool=SIGHT_WORDS.filter(w=>EMOJIS_MAP[w]);
   const words=shuffle(pool).slice(0,6);
-  return words.map(word=>({type:'spelling',prompt:'Spell the word for this picture!',display:EMOJIS_MAP[word],displayType:'emojiSpell',hint:word,answer:word.toUpperCase(),emoji:'🧩'}));
+  return words.map(word=>({type:'spelling',prompt:'Spell the word for this picture!',display:EMOJIS_MAP[word],hint:word,answer:word.toUpperCase()}));
 }
 
 function generateMixed() {
@@ -667,11 +668,11 @@ function generateMixed() {
     if(i%2===0){
       const a=randInt(1,10),b=randInt(1,10),ans=a+b;
       const d=shuffle([ans-1,ans+1,ans+2].filter(x=>x!==ans)).slice(0,3);
-      qs.push({type:'choice',prompt:'Solve it!',display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...d]),answer:ans,emoji:'✨'});
+      qs.push({type:'choice',prompt:'Solve it!',display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...d]),answer:ans});
     } else {
       const word=rand(SIGHT_WORDS);
       const d=shuffle(SIGHT_WORDS.filter(w=>w!==word)).slice(0,3);
-      qs.push({type:'choice',prompt:'Read the word!',display:word,displayType:'bigWord',options:shuffle([word,...d]),answer:word,emoji:'✨'});
+      qs.push({type:'choice',prompt:'Read the word!',display:word,displayType:'bigWord',options:shuffle([word,...d]),answer:word});
     }
   }
   return qs;
@@ -693,27 +694,29 @@ function buildMap() {
 }
 
 function startLevel(id) {
-  STATE.currentLevel=id; STATE.currentQ=0; STATE.currentScore=0;
+  SESSION.currentLevel=id; SESSION.currentQ=0; SESSION.currentScore=0;
   const lvl=LEVELS[id];
-  STATE.questions=lvl.questions();
+  SESSION.questions=lvl.questions();
   document.getElementById('gameLevelName').textContent=lvl.name;
-  document.getElementById('gameQTotal').textContent=STATE.questions.length;
+  document.getElementById('gameQTotal').textContent=SESSION.questions.length;
   showScreen('screen-game');
   showQuestion();
   scheduleAttentionCheck();
 }
 
 let attentionTimeout=null;
+function inGame(){ return document.getElementById('screen-game').classList.contains('active'); }
 function scheduleAttentionCheck() {
   clearTimeout(attentionTimeout);
+  if(!inGame()) return;
   attentionTimeout=setTimeout(()=>triggerAttentionCheck(),(30+Math.random()*60)*1000);
 }
 
 function showQuestion() {
-  const q=STATE.questions[STATE.currentQ];
+  const q=SESSION.questions[SESSION.currentQ];
   if(!q){levelComplete();return;}
-  document.getElementById('gameQNum').textContent=STATE.currentQ+1;
-  document.getElementById('progressFill').style.width=(STATE.currentQ/STATE.questions.length*100)+'%';
+  document.getElementById('gameQNum').textContent=SESSION.currentQ+1;
+  document.getElementById('progressFill').style.width=(SESSION.currentQ/SESSION.questions.length*100)+'%';
 
   const panel=document.getElementById('gamePanel');
   const btns=document.getElementById('gameButtons');
@@ -733,7 +736,7 @@ function showQuestion() {
     q.options.forEach(opt=>{html+=`<button class="option-btn" onclick="checkAnswer('${opt}','${q.answer}',this)">${opt}</button>`;});
     html+=`</div>`;
   } else if(q.type==='sentence'){
-    STATE.sentenceBuilt=[]; STATE.sentenceWords=q.words; STATE.sentenceCorrect=q.correct;
+    SESSION.sentenceBuilt=[]; SESSION.sentenceWords=q.words; SESSION.sentenceCorrect=q.correct;
     html+=`<div style="font-size:7px;color:var(--pink);margin-bottom:8px;">TAP WORDS TO BUILD THE SENTENCE!</div>`;
     html+=`<div class="sentence-box" id="sentenceBox" onclick="removeLastWord()"><div style="font-size:7px;color:#555;" id="sentencePlaceholder">TAP WORDS BELOW ↓</div></div>`;
     html+=`<div class="word-bank" id="wordBank">`;
@@ -744,7 +747,7 @@ function showQuestion() {
     const letters=q.hint.toUpperCase().split('');
     const extras='AEIOURSTMPL'.split('').filter(l=>!letters.includes(l)).slice(0,3);
     const tiles=shuffle([...letters,...extras]);
-    STATE.spellingAnswer=[]; STATE.spellingCorrect=q.answer; STATE.spellingLen=letters.length;
+    SESSION.spellingAnswer=[]; SESSION.spellingCorrect=q.answer; SESSION.spellingLen=letters.length;
     html+=`<div class="big-image">${q.display}</div><div style="font-size:7px;color:var(--pink);margin:8px 0;">SPELL THE WORD:</div>`;
     html+=`<div class="answer-slots" id="answerSlots">`;
     for(let i=0;i<letters.length;i++) html+=`<div class="answer-slot" id="slot${i}"></div>`;
@@ -776,13 +779,13 @@ function checkAnswer(selected, correct, btn) {
   allBtns.forEach(b=>b.disabled=true);
   if(isCorrect){
     btn.classList.add('correct'); playCorrectSound(); showFeedback(true);
-    STATE.currentScore++; STATE.stars++; saveState();
-    setTimeout(()=>{hideFeedback();STATE.currentQ++;showQuestion();},1500);
+    SESSION.currentScore++; STATE.stars++; saveState();
+    setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
     btn.classList.add('wrong');
     allBtns.forEach(b=>{if(b.textContent==correct||b.textContent==String(correct)) b.classList.add('correct');});
     playWrongSound(); showFeedback(false,correct);
-    setTimeout(()=>{hideFeedback();STATE.currentQ++;showQuestion();},2000);
+    setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},2000);
   }
 }
 
@@ -790,55 +793,55 @@ function addWord(word,idx){
   const chip=document.getElementById(`wchip${idx}`);
   if(chip.classList.contains('used')) return;
   chip.classList.add('used');
-  STATE.sentenceBuilt.push({word,idx});
+  SESSION.sentenceBuilt.push({word,idx});
   renderSentenceBox();
 }
 function removeLastWord(){
-  if(!STATE.sentenceBuilt.length) return;
-  const last=STATE.sentenceBuilt.pop();
+  if(!SESSION.sentenceBuilt.length) return;
+  const last=SESSION.sentenceBuilt.pop();
   const chip=document.getElementById(`wchip${last.idx}`);
   if(chip) chip.classList.remove('used');
   renderSentenceBox();
 }
 function renderSentenceBox(){
   const box=document.getElementById('sentenceBox');
-  if(!STATE.sentenceBuilt.length){box.innerHTML=`<div style="font-size:7px;color:#555;">TAP WORDS BELOW ↓</div>`;return;}
-  box.innerHTML=STATE.sentenceBuilt.map(({word})=>`<div class="placed-word">${word}</div>`).join('');
+  if(!SESSION.sentenceBuilt.length){box.innerHTML=`<div style="font-size:7px;color:#555;">TAP WORDS BELOW ↓</div>`;return;}
+  box.innerHTML=SESSION.sentenceBuilt.map(({word})=>`<div class="placed-word">${word}</div>`).join('');
 }
 function checkSentence(){
-  const built=STATE.sentenceBuilt.map(s=>s.word).join(' ');
-  const q=STATE.questions[STATE.currentQ];
+  const built=SESSION.sentenceBuilt.map(s=>s.word).join(' ');
+  const q=SESSION.questions[SESSION.currentQ];
   if(built.toLowerCase()===q.correct.toLowerCase()){
-    playCorrectSound();showFeedback(true);STATE.currentScore++;STATE.stars++;saveState();
-    setTimeout(()=>{hideFeedback();STATE.currentQ++;showQuestion();},1500);
+    playCorrectSound();showFeedback(true);SESSION.currentScore++;STATE.stars++;saveState();
+    setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
     playWrongSound();showFeedback(false,q.correct);
-    setTimeout(()=>{hideFeedback();STATE.currentQ++;showQuestion();},2500);
+    setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},2500);
   }
 }
 
 function tapLetter(l,idx){
   const tile=document.getElementById(`tile${idx}`);
   if(tile.classList.contains('selected')) return;
-  if(STATE.spellingAnswer.length>=STATE.spellingLen) return;
+  if(SESSION.spellingAnswer.length>=SESSION.spellingLen) return;
   tile.classList.add('selected');
-  STATE.spellingAnswer.push({l,idx});
-  const slot=document.getElementById(`slot${STATE.spellingAnswer.length-1}`);
+  SESSION.spellingAnswer.push({l,idx});
+  const slot=document.getElementById(`slot${SESSION.spellingAnswer.length-1}`);
   if(slot){slot.textContent=l;slot.classList.add('filled');}
 }
 function clearSpelling(){
-  STATE.spellingAnswer=[];
+  SESSION.spellingAnswer=[];
   document.querySelectorAll('.letter-tile').forEach(t=>t.classList.remove('selected'));
   document.querySelectorAll('.answer-slot').forEach(s=>{s.textContent='';s.classList.remove('filled');});
 }
 function checkSpelling(){
-  const ans=STATE.spellingAnswer.map(a=>a.l).join('');
-  if(ans===STATE.spellingCorrect){
-    playCorrectSound();showFeedback(true);STATE.currentScore++;STATE.stars++;saveState();
-    setTimeout(()=>{hideFeedback();STATE.currentQ++;showQuestion();},1500);
+  const ans=SESSION.spellingAnswer.map(a=>a.l).join('');
+  if(ans===SESSION.spellingCorrect){
+    playCorrectSound();showFeedback(true);SESSION.currentScore++;STATE.stars++;saveState();
+    setTimeout(()=>{hideFeedback();SESSION.currentQ++;showQuestion();},1500);
   } else {
-    playWrongSound();showFeedback(false,STATE.spellingCorrect);
-    setTimeout(()=>{clearSpelling();hideFeedback();STATE.currentQ++;showQuestion();},2500);
+    playWrongSound();showFeedback(false,SESSION.spellingCorrect);
+    setTimeout(()=>{clearSpelling();hideFeedback();SESSION.currentQ++;showQuestion();},2500);
   }
 }
 
@@ -873,10 +876,10 @@ const attentionChecks=[
   {emoji:'🍄',text:'MARIO SAYS:\n"Hey! Eyes on the screen!"',prompt:'TAP READY TO KEEP GOING! 👇'},
   {emoji:'⭐',text:'STAR POWER CHECK!\nCan you see the screen?',prompt:'TAP IF YOU CAN SEE THIS! 👇'},
   {emoji:'🐢',text:'BOWSER IS WATCHING!\nStay focused to save Peach!',prompt:'TAP TO DEFEAT BOWSER! 👇'},
-  {emoji:'🪙',text:'COIN BONUS!\nTap quickly to earn extra coins!',prompt:'⚡ TAP NOW FOR BONUS! ⚡'},
 ];
 
 function triggerAttentionCheck(){
+  if(!inGame()) return;
   const check=rand(attentionChecks);
   document.getElementById('attentionEmoji').textContent=check.emoji;
   document.getElementById('attentionText').textContent=check.text;
@@ -894,10 +897,10 @@ function dismissAttention(){
 
 function levelComplete(){
   clearTimeout(attentionTimeout);
-  const lvl=LEVELS[STATE.currentLevel];
-  const total=STATE.questions.length,score=STATE.currentScore,pct=score/total;
+  const lvl=LEVELS[SESSION.currentLevel];
+  const total=SESSION.questions.length,score=SESSION.currentScore,pct=score/total;
   const starsEarned=pct>=0.8?3:pct>=0.5?2:1;
-  if(!STATE.completedLevels.includes(STATE.currentLevel)) STATE.completedLevels.push(STATE.currentLevel);
+  if(!STATE.completedLevels.includes(SESSION.currentLevel)) STATE.completedLevels.push(SESSION.currentLevel);
   saveState();playLevelUpSound();launchConfetti();
   document.getElementById('lcEmoji').textContent=lvl.icon;
   document.getElementById('lcTitle').textContent=`${lvl.name} COMPLETE! 🎉`;
@@ -909,7 +912,7 @@ function levelComplete(){
 }
 
 function playNextLevel(){
-  const next=STATE.currentLevel+1;
+  const next=SESSION.currentLevel+1;
   if(next<LEVELS.length) startLevel(next);
   else showScreen('screen-map');
 }
