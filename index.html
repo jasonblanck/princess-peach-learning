@@ -92,6 +92,15 @@
     animation: float 3s ease-in-out infinite;
     filter: drop-shadow(0 0 20px #ff6eb4);
   }
+
+  .castle-scene {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px #ff6eb4);
+  }
+  .castle-main { font-size: clamp(60px, 15vw, 120px); line-height: 1; }
+  .castle-decor { display: flex; gap: 6px; font-size: clamp(14px, 3vw, 22px); flex-wrap: wrap; justify-content: center; max-width: 320px; }
+  .castle-tier-label { font-size: 7px; color: var(--gold); text-shadow: 1px 1px 0 #000; letter-spacing: 1px; }
   @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
 
   .game-title {
@@ -399,7 +408,7 @@
     <div class="hud-item" style="color:var(--gold);">🔥 STREAK: <span id="titleStreak">0</span></div>
   </div>
   <div style="display:flex; flex-direction:column; align-items:center; gap:20px; flex:1; justify-content:center; width:100%; max-width:600px;">
-    <div class="title-castle">🏰</div>
+    <div class="castle-scene" id="castleScene"></div>
     <div class="game-title">PRINCESS PEACH'S<br>LEARNING KINGDOM</div>
     <div class="peach-sprite">👸</div>
     <div style="font-size:clamp(6px,1.5vw,9px); color:var(--pink); text-align:center; line-height:2.5; max-width:350px;" id="peachMessage">"HELLO! LET'S LEARN TOGETHER!"</div>
@@ -583,6 +592,27 @@ function updateHUD() {
   ['titleStars','mapStars','gameStars','shopStars','titleStarsTotal'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=s; });
   const tn=document.getElementById('titleName'); if(tn) tn.textContent=STATE.playerName;
   const ts=document.getElementById('titleStreak'); if(ts) ts.textContent=STATE.streakDays||0;
+  renderCastle();
+}
+
+const CASTLE_TIERS = [
+  {min: 0,   label: 'A LITTLE COTTAGE',     decor: ''},
+  {min: 5,   label: 'CASTLE WITH A FLAG',   decor: '🚩'},
+  {min: 15,  label: 'KING\'S GARDEN',       decor: '🚩 🌳 🌳'},
+  {min: 30,  label: 'BLOSSOMING KINGDOM',   decor: '🚩 🌳 🌸 🌳 🌸'},
+  {min: 50,  label: 'MAGIC KINGDOM',        decor: '🚩 ✨ 🌸 🌳 🌸 ✨'},
+  {min: 75,  label: 'RAINBOW REALM',        decor: '🌈 ✨ 🌸 🌳 🌸 ✨ 🌈'},
+  {min: 100, label: 'ROYAL EMPIRE',         decor: '👑 🌈 ✨ 🌸 🌳 🌸 ✨ 🌈 👑'},
+  {min: 150, label: 'PEACH\'S PARADISE',    decor: '👑 🌈 ⭐ 🦋 🌸 🌳 🌸 🦋 ⭐ 🌈 👑'},
+];
+
+function renderCastle() {
+  const el = document.getElementById('castleScene');
+  if (!el) return;
+  const tier = CASTLE_TIERS.filter(t => STATE.stars >= t.min).pop() || CASTLE_TIERS[0];
+  el.innerHTML = `<div class="castle-main">🏰</div>` +
+    (tier.decor ? `<div class="castle-decor">${tier.decor}</div>` : '') +
+    `<div class="castle-tier-label">${tier.label}</div>`;
 }
 
 function showStreakBonus(streak) {
