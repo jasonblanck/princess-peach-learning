@@ -384,6 +384,7 @@
 
 <div class="game-bg" id="gameBg"></div>
 <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
+<button class="music-btn" id="readBtn" onclick="toggleReadAloud()" style="right:auto; left:10px;">🔈</button>
 
 <!-- INTRO SCREEN -->
 <div class="screen active" id="screen-intro">
@@ -566,6 +567,24 @@ function toggleMusic() {
   STATE.musicOn = !STATE.musicOn;
   document.getElementById('musicBtn').textContent = STATE.musicOn ? '🎵' : '🔇';
   saveState();
+}
+
+function toggleReadAloud() {
+  STATE.readAloud = !STATE.readAloud;
+  document.getElementById('readBtn').textContent = STATE.readAloud ? '🔈' : '🔇';
+  saveState();
+  if (STATE.readAloud) speak('Read to me is on');
+  else if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+function speak(text) {
+  if (!STATE.readAloud || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.rate = 0.9; u.pitch = 1.2;
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
 }
 
 function createStars() {
@@ -877,6 +896,25 @@ function showQuestion() {
     btns.innerHTML=`<button class="pixel-btn btn-green" onclick="checkSpelling()">✅ CHECK!</button><button class="pixel-btn btn-blue" onclick="clearSpelling()">↩ CLEAR</button>`;
   }
   panel.innerHTML=html;
+  speakQuestion(q);
+}
+
+function speakQuestion(q) {
+  if (!STATE.readAloud) return;
+  const promptText = q.prompt.replace(/[^A-Za-z0-9 ?!.,]/g, '').trim();
+  let body = '';
+  if (q.type === 'choice') {
+    if (q.displayType === 'bigLetter') body = `the letter ${q.display}`;
+    else if (q.displayType === 'bigWord') body = q.display;
+    else if (q.displayType === 'math' || q.displayType === 'numberLine') body = q.display.replace('=', 'equals').replace('?', 'what');
+    else if (q.displayType === 'emojiCount') body = '';
+    else body = q.display;
+  } else if (q.type === 'phonics' || q.type === 'spelling') {
+    body = q.hint || q.display;
+  } else if (q.type === 'sentence') {
+    body = '';
+  }
+  speak(`${promptText}. ${body}`);
 }
 
 function renderChoiceDisplay(q) {
@@ -1101,6 +1139,7 @@ function startGame(){
 window.onload=()=>{
   loadState();createStars();
   document.getElementById('musicBtn').textContent=STATE.musicOn?'🎵':'🔇';
+  document.getElementById('readBtn').textContent=STATE.readAloud?'🔈':'🔇';
   if(STATE.playerName){
     const streak=checkDailyStreak();
     buildMap();buildShop();updateHUD();showScreen('screen-title');startBgMusic();
