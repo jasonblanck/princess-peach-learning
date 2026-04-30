@@ -768,7 +768,7 @@ const LEVELS = [
 ];
 
 const SIGHT_WORDS = ['cat','dog','sun','run','hop','big','red','hat','map','cup','fan','bat','log','pin','jet','mom','dad','bed','sit','lap','nap','jam','dig','bug','hug','tug','mud','cut','bus','nut','cake','rose'];
-const EMOJIS_MAP = {'cat':'🐱','dog':'🐶','sun':'☀️','hat':'🎩','bug':'🐛','cup':'🍵','bed':'🛏️','bus':'🚌','mom':'👩','dad':'👨','cake':'🎂','rose':'🌹'};
+const EMOJIS_MAP = {'cat':'🐱','dog':'🐶','sun':'☀️','hat':'🎩','bug':'🐛','cup':'🍵','bed':'🛏️','bus':'🚌','mom':'👩','dad':'👨','cake':'🎂','rose':'🌹','bat':'🦇','jet':'✈️','pin':'📌','map':'🗺️','nut':'🥜','log':'🪵','fan':'🪭'};
 
 function rand(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 function shuffle(arr) { return [...arr].sort(()=>Math.random()-0.5); }
@@ -780,7 +780,11 @@ function generateLetterMatch() {
   for(let i=0;i<6;i++){
     const correct=rand(letters);
     const opts=shuffle([correct,...shuffle(letters.filter(l=>l!==correct)).slice(0,3)]);
-    qs.push({type:'choice',prompt:'Which letter is this?',display:correct,displayType:'bigLetter',options:opts,answer:correct});
+    if(i%2===0){
+      qs.push({type:'choice',prompt:'Which letter is this?',display:correct,displayType:'bigLetter',options:opts,answer:correct});
+    } else {
+      qs.push({type:'choice',prompt:'Find the BIG letter that matches!',display:correct.toLowerCase(),displayType:'bigLetter',options:opts,answer:correct});
+    }
   }
   return qs;
 }
@@ -821,10 +825,10 @@ function generatePhonics() {
 function generateAddition() {
   const qs=[];
   for(let i=0;i<6;i++){
-    const a=randInt(1,9),b=randInt(1,9),ans=a+b;
+    const a=randInt(1,5),b=randInt(1,5),ans=a+b;
     const decoys=shuffle([ans-1,ans+1,ans+2,ans-2].filter(x=>x>0&&x!==ans)).slice(0,3);
     const e=rand(['🍄','⭐','🪙','🌸']);
-    qs.push({type:'choice',prompt:`${e.repeat(Math.min(a,5))} + ${e.repeat(Math.min(b,5))}`,display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...decoys]),answer:ans});
+    qs.push({type:'choice',prompt:`${e.repeat(a)} + ${e.repeat(b)}`,display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...decoys]),answer:ans});
   }
   return qs;
 }
@@ -837,6 +841,14 @@ function generateSentence() {
     {words:['The','dog','is','red'],correct:'The dog is red'},
     {words:['I','see','the','sun'],correct:'I see the sun'},
     {words:['He','has','a','hat'],correct:'He has a hat'},
+    {words:['We','can','play','here'],correct:'We can play here'},
+    {words:['Mom','has','a','cup'],correct:'Mom has a cup'},
+    {words:['Dad','can','run','fast'],correct:'Dad can run fast'},
+    {words:['I','want','a','hug'],correct:'I want a hug'},
+    {words:['The','bug','is','small'],correct:'The bug is small'},
+    {words:['She','can','jump','high'],correct:'She can jump high'},
+    {words:['He','sees','a','star'],correct:'He sees a star'},
+    {words:['I','love','my','mom'],correct:'I love my mom'},
   ];
   return shuffle(sentences).slice(0,5).map(s=>({type:'sentence',prompt:'Put the words in order!',display:'👸 Make a sentence!',words:shuffle(s.words),correct:s.correct,answer:s.correct}));
 }
@@ -867,7 +879,7 @@ const RHYME_GROUPS = [
   ['bug','hug','jug','mug','tug'],
   ['nut','cut','but','hut'],
   ['cake','bake','lake','make','take','rake','wake'],
-  ['rose','nose','hose','close'],
+  ['rose','nose','hose'],
 ];
 
 function generateRhyming() {
@@ -911,8 +923,8 @@ function generateMixed() {
   const qs=[];
   for(let i=0;i<6;i++){
     if(i%2===0){
-      const a=randInt(1,10),b=randInt(1,10),ans=a+b;
-      const d=shuffle([ans-1,ans+1,ans+2].filter(x=>x!==ans)).slice(0,3);
+      const a=randInt(1,5),b=randInt(1,5),ans=a+b;
+      const d=shuffle([ans-1,ans+1,ans+2].filter(x=>x>0&&x!==ans)).slice(0,3);
       qs.push({type:'choice',prompt:'Solve it!',display:`${a} + ${b} = ?`,displayType:'math',options:shuffle([ans,...d]),answer:ans});
     } else {
       const word=rand(SIGHT_WORDS);
@@ -1108,7 +1120,11 @@ function checkSpelling(){
   }
 }
 
-function tapSyllable(el,ch){ el.classList.add('tapped'); playNote(440+Math.random()*200,0.15); }
+function tapSyllable(el,ch){
+  el.classList.add('tapped');
+  playNote(440+Math.random()*200,0.15);
+  if(STATE.readAloud) speak(ch.toUpperCase());
+}
 
 const correctMessages=["AMAZING! ⭐","SUPER! 🌟","WOW! 🎉","YOU GOT IT! 👑","PERFECT! ✨","GREAT JOB! 🍄","PRINCESS PEACH IS HAPPY! 👸"];
 const wrongMessages=["SO CLOSE! TRY AGAIN 💪","KEEP GOING! 🌸","MARIO BELIEVES IN YOU! 🍄","ALMOST! 🌟"];
